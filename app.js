@@ -16,6 +16,7 @@
 const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
+const { MESSAGE_ERROR, MESSAGE_SUCCESS } = require('./modulo/config.js') 
 
 const app = express()
 
@@ -41,6 +42,7 @@ app.get('/alunos', cors(),async function (request,response){
     let message
     const controllerAluno = require ('./controller/controllerAluno.js') //Import do arquivo controllerAluno
     const dadosAlunos = await controllerAluno.listarAluno() //Retorna todos os alunos existentes no Banco de Dados
+    
 
     //Valida se existe retorno de dados
     if(dadosAlunos)
@@ -49,7 +51,7 @@ app.get('/alunos', cors(),async function (request,response){
         message = dadosAlunos
     }else{
         statusCode = 404
-        message = "Nenhum aluno foi encontrado,verifique o codigo novamente"
+        message = MESSAGE_ERROR.NOT_FOUND_DB
     }
     
     
@@ -63,33 +65,76 @@ app.post('/aluno', cors(), jsonParser, async function(request,response){
     let message
     let headerContentType
 
-
+    //Recebe o tipo content-type que foi enviado no header da requisicao
     headerContentType = request.headers['content-type']
     //console.log(headerContentType);
 
+    //Validar se o  content-type é application/json
     if(headerContentType == 'application/json'){
         let dadosBody = request.body// Escrevendo isso e possivel observar npo terminal o corpo/estrutura da requisicao do novo aluno que cadastramos no Posteman
-        if(dadosBody.length > 0)
+        
+        //Realiza um processo de conversao de dados para conseguir comparar o json vazio
+        if(JSON.stringify(dadosBody) != '{}')
         {
-            statusCode = 200
-            message = 'Sucesso'
+            //Import do arquivo da controller do aluno
+            const controllerAluno = require('./controller/controllerAluno.js')
+            //Chama a funcao novoAluno da controller e encaminha os dados do body
+            const novoAluno = await controllerAluno.novoAluno(dadosBody)
+
+               statusCode = novoAluno.status
+               message = novoAluno.message
+
         }else{
             statusCode = 400
-            message = 'O tipo de midia content-type da solicitacao nao é suportado pelo servidor, use (application/json)'
+            message = MESSAGE_ERROR.CONTENT_TYPE
         }
-
-
-        statusCode = 200
-        message = "Sucessoo"
     }else{
         statusCode = 415
-        message = "O tipo de midia content-type da solicitacao nao é suportado pelo servidor, use (application/json)"
+        message = MESSAGE_ERROR.CONTENT_TYPE
     }
 
     response.status(statusCode)
     response.json(message)
    
 
+})
+
+app.put('/atualizaraluno', cors(), jsonParser, async function(request,response){
+       
+
+    let statusCode
+    let message
+    let headerContentType
+      //Recebe o tipo content-type que foi enviado no header da requisicao
+      headerContentType = request.headers['content-type']
+      //console.log(headerContentType);
+  
+      //Validar se o  content-type é application/json
+      if(headerContentType == 'application/json'){
+          let dadosBody = request.body// Escrevendo isso e possivel observar npo terminal o corpo/estrutura da requisicao do novo aluno que cadastramos no Posteman
+          
+          //Realiza um processo de conversao de dados para conseguir comparar o json vazio
+          if(JSON.stringify(dadosBody) != '{}')
+          {
+              //Import do arquivo da controller do aluno
+              const controllerAluno = require('./controller/controllerAluno.js')
+              //Chama a funcao novoAluno da controller e encaminha os dados do body
+              const atualizarAluno = await controllerAluno.atualizarAluno(dadosBody)
+  
+                 statusCode = atualizarAluno.status
+                 message = atualizarAluno.message
+  
+          }else{
+              statusCode = 400
+              message = MESSAGE_ERROR.CONTENT_TYPE
+          }
+      }else{
+          statusCode = 415
+          message = MESSAGE_ERROR.CONTENT_TYPE
+      }
+  
+      response.status(statusCode)
+      response.json(message)
 })
 
 //Ativa o servidor para receber requisicoes HTTP
